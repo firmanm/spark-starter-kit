@@ -12,13 +12,10 @@
     "AWS_SECRET_ACCESS_KEY": {
       "required": true
     },
-    "CDN": {
-      "required": true
-    },
-    "CDN_UPLOADS": {
-      "required": true
-    },
     "DEPLOY_TASKS": {
+      "required": true
+    },
+    "HEROKU_APP_NAME": {
       "required": true
     },
     "LANG": {
@@ -69,6 +66,9 @@
     "S3_BUCKET_NAME": {
       "required": true
     },
+    "S3_REGION": {
+      "required": true
+    },
     "SECRET_KEY_BASE": {
       "required": true
     },
@@ -96,9 +96,6 @@
     },
     {
       "url": "heroku/ruby"
-    },
-    {
-      "url": "https://github.com/gunpowderlabs/buildpack-ruby-rake-deploy-tasks"
     }
   ]
 }

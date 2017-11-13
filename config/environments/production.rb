@@ -19,11 +19,10 @@ Rails.application.configure do
   # For large-scale production use, consider using a caching reverse proxy like
   # NGINX, varnish or squid.
   config.action_dispatch.rack_cache = true
-
-  # Action mailer con host production
-  if ENV['APP_DOMAIN']
-    routes.default_url_options = config.action_mailer.default_url_options = { host: 'https://' + ENV['APP_DOMAIN'] }
-  end
+  # Attempt to read encrypted secrets from `config/secrets.yml.enc`.
+  # Requires an encryption key in `ENV["RAILS_MASTER_KEY"]` or
+  # `config/secrets.yml.key`.
+  config.read_encrypted_secrets = true
 
   # Disable serving static files from the `/public` folder by default since
   # Apache or NGINX already handles this.
@@ -53,6 +52,11 @@ Rails.application.configure do
   # config.action_dispatch.x_sendfile_header = 'X-Sendfile' # for Apache
   # config.action_dispatch.x_sendfile_header = 'X-Accel-Redirect' # for NGINX
 
+  # Mount Action Cable outside main process or domain
+  # config.action_cable.mount_path = nil
+  # config.action_cable.url = 'wss://example.com/cable'
+  # config.action_cable.allowed_request_origins = [ 'http://example.com', /http:\/\/example.*/ ]
+
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   # config.force_ssl = true
 
@@ -73,7 +77,8 @@ Rails.application.configure do
       password: ENV['MEMCACHEDCLOUD_PASSWORD'],
       value_max_bytes: 104_857_60,
       compress: false,
-      pool_size: ENV['MEMCACHED_POOL_SIZE'] || 5
+      pool_size: ENV['MEMCACHED_POOL_SIZE'] || 5,
+      expires_in: 1.week
     }
 
     config.cache_store = :mem_cache_store, ENV['MEMCACHEDCLOUD_SERVERS'].split(','), memcached_config
@@ -87,10 +92,21 @@ Rails.application.configure do
     }
   end
 
-  # Enable serving of images, stylesheets, and JavaScripts from an asset server.
-  if ENV['CDN']
-    config.action_controller.asset_host = config.action_mailer.asset_host = 'https://' + ENV['CDN']
+  heroku_app_url = ENV['HEROKU_APP_NAME'].present? && "#{ENV['HEROKU_APP_NAME']}.herokuapp.com"
+
+  # Action mailer con host production
+  if (host = heroku_app_url || ENV['APP_DOMAIN']).present?
+    routes.default_url_options = config.action_mailer.default_url_options = { host: "https://#{host}" }
   end
+
+  # Enable serving of images, stylesheets, and JavaScripts from an asset server.
+  if (host = heroku_app_url || ENV['CDN']).present?
+    config.action_controller.asset_host = config.action_mailer.asset_host = "https://#{host}"
+  end
+  # Use a real queuing backend for Active Job (and separate queues per environment)
+  # config.active_job.queue_adapter     = :resque
+  # config.active_job.queue_name_prefix = "spark_starter_kit_#{Rails.env}"
+  config.action_mailer.perform_caching = false
 
   # Ignore bad email addresses and do not raise email delivery errors.
   # Set this to true and configure the email server for immediate delivery to raise delivery errors.
@@ -116,7 +132,8 @@ Rails.application.configure do
       s3_credentials: {
         bucket: ENV['S3_BUCKET_NAME'],
         access_key_id: ENV['AWS_ACCESS_KEY_ID'],
-        secret_access_key: ENV['AWS_SECRET_ACCESS_KEY']
+        secret_access_key: ENV['AWS_SECRET_ACCESS_KEY'],
+        s3_region: ENV['S3_REGION']
       },
       s3_headers: { 'Cache-Control': 'max-age=31557600' },
       s3_protocol: :https,
@@ -142,4 +159,6 @@ Rails.application.configure do
 
   # fix for fonts CORS issues with CloudFront
   config.font_assets.origin = '*'
+  # Do not dump schema after migrations.
+  config.active_record.dump_schema_after_migration = false
 end
